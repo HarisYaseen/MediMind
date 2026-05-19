@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediMind - Settings</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .header {
+            padding: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .setting-option {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #ddd;
+        }
+        .nav a {
+            text-align: center;
+            color: #666;
+            text-decoration: none;
+        }
+        .nav a.active {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Settings</h1>
+    </div>
+
+    <div class="content">
+        <div class="setting-option">
+            <p>Reminders are active when the app is open. For best results, keep MediMind running in the background.</p>
+        </div>
+        <div class="setting-option">
+            <div>
+                <div>Clear All Data</div>
+                <small>Delete all 0 medicines</small>
+            </div>
+        </div>
+        <div class="setting-option">
+            <div>
+                <div>About MediMind</div>
+                <small>Version 1.0.0</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Made with ❤️ for better health<br>
+        &copy; 2024 MediMind Team
+    </div>
+
+    <div class="nav">
+        <a href="/">
+            <div>🏠</div>
+            <div>Home</div>
+        </a>
+        <a href="/add-medicine">
+            <div>+</div>
+            <div>Add Medicine</div>
+        </a>
+        <a href="/settings" class="active">
+            <div>⚙️</div>
+            <div>Settings</div>
+        </a>
+    </div>
+</body>
+</html>

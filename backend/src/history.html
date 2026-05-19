@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MediMind - History</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f7f8fa;
+            padding-bottom: 80px; /* Space for nav bar */
+        }
+
+        .header {
+            padding: 20px;
+            background-color: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+        }
+
+        .header a {
+            text-decoration: none;
+            color: #1d2c4b;
+            font-size: 28px;
+            margin-right: 15px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #1d2c4b;
+        }
+
+        .content {
+            padding: 20px;
+        }
+        
+        #medicines-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .medicine-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+
+        .medicine-card.removing {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .medicine-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .medicine-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1d2c4b;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff4d4d;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        .medicine-details,
+        .medicine-times {
+            color: #657786;
+            font-size: 14px;
+        }
+
+        .medicine-times {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .time-capsule {
+            background-color: #eaf0f6;
+            color: #1d2c4b;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        #no-medicines-message {
+            text-align: center;
+            padding: 50px 20px;
+            color: #888;
+        }
+
+        .nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .nav a {
+            text-align: center;
+            color: #666;
+            text-decoration: none;
+        }
+
+        .nav a.active {
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        .nav a.active div:first-child {
+            background-color: #eaf0f6;
+            border-radius: 16px;
+            padding: 4px 16px;
+         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 85%;
+            max-width: 350px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-content h2 {
+            margin-top: 0;
+            color: #1d2c4b;
+        }
+        .modal-content p {
+            color: #657786;
+            font-size: 16px;
+        }
+        .modal-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/">&larr;</a>
+        <h1>Medication History</h1>
+    </div>
+
+    <div class="content">
+        <div id="medicines-list"></div>
+        <div id="no-medicines-message" style="display: none;">
+            <h3>No Medications Added</h3>
+            <p>Tap 'Add Medicine' to get started.</p>
+        </div>
+    </div>
+
+    <div class="nav">
+        <a href="/">
+            <div>🏠</div>
+            <div>Home</div>
+        </a>
+        <a href="/add-medicine">
+            <div>+</div>
+            <div>Add Medicine</div>
+        </a>
+        <a href="/history" class="active">
+            <div>🕒</div>
+            <div>History</div>
+        </a>
+        <a href="/settings">
+            <div>⚙️</div>
+            <div>Settings</div>
+        </a>
+    </div>
+
+    <!-- Alarm Modal -->
+    <div id="alarm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="alarm-title">Time for your medicine!</h2>
+            <p id="alarm-details">It's time to take [Medicine Name].</p>
+            <button id="alarm-ok-btn" class="modal-btn">I've taken it</button>
+        </div>
+    </div>
+
+    <!-- Audio Permission Modal -->
+    <div id="audio-permission-modal" class="modal-overlay active">
+        <div class="modal-content">
+            <h2>Enable Alarm Sounds</h2>
+            <p>This app needs your permission to play alarm sounds for reminders. Please click "Enable" to allow audio playback.</p>
+            <button id="enable-audio-btn" class="modal-btn">Enable</button>
+        </div>
+    </div>
+
+    <script>
+        let allMedicines = [];
+        let alarmAudio = null;
+        let canPlayAudio = false;
+        let activeAlarmTimer = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupAudioPermission();
+            fetchMedicines();
+            setInterval(checkAlarms, 1000);
+        });
+
+        function setupAudioPermission() {
+            const permissionModal = document.getElementById('audio-permission-modal');
+            const enableAudioBtn = document.getElementById('enable-audio-btn');
+
+            enableAudioBtn.addEventListener('click', () => {
+                const silentAudio = new Audio('data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaXRyYXRlIHN1Y sidaTEAAAAAABEv//CQsQ3AAAAP1t4//8rPESd5f5rAAAAAFR4WNgAAAAAAAAAAAB3pAAAAAAAAAAAAA==');
+                silentAudio.play().then(() => {
+                    canPlayAudio = true;
+                    permissionModal.classList.remove('active');
+                }).catch(e => {
+                    permissionModal.classList.remove('active');
+                });
+            });
+        }
+
+        function fetchMedicines() {
+            fetch('/medicines')
+                .then(response => response.json())
+                .then(medicines => {
+                    allMedicines = medicines;
+                    renderMedicineCards(medicines);
+                })
+                .catch(error => {
+                    console.error('Error fetching medicines:', error);
+                    const noMedsMessage = document.getElementById('no-medicines-message');
+                    noMedsMessage.innerHTML = `<p>Could not load medicines. Please check your connection.</p>`;
+                    noMedsMessage.style.display = 'block';
+                });
+        }
+
+        function renderMedicineCards(medicines) {
+            const listElement = document.getElementById('medicines-list');
+            const noMedsMessage = document.getElementById('no-medicines-message');
+            listElement.innerHTML = '';
+
+            if (!medicines || medicines.length === 0) {
+                noMedsMessage.style.display = 'block';
+            } else {
+                noMedsMessage.style.display = 'none';
+                medicines.forEach(med => listElement.appendChild(createMedicineCard(med)));
+            }
+        }
+
+        function createMedicineCard(med) {
+            const card = document.createElement('div');
+            card.className = 'medicine-card';
+            card.setAttribute('data-id', med.id);
+
+            const timesHtml = med.times && med.times.length > 0 
+                ? med.times.map(t => `<div class="time-capsule">${t}</div>`).join('')
+                : '<div class="time-capsule">No time set</div>';
+
+            card.innerHTML = `
+                <div class="medicine-header">
+                    <span class="medicine-name">${med.medicineName || 'N/A'}</span>
+                    <button class="delete-btn" onclick="deleteMedicine(${med.id}, this)">Delete</button>
+                </div>
+                <div class="medicine-details"><span>Dosage: ${med.dosage || 'N/A'}</span></div>
+                <div class="medicine-times">${timesHtml}</div>
+            `;
+            return card;
+        }
+
+        function deleteMedicine(id, buttonElement) {
+            if (!confirm('Are you sure you want to delete this medicine reminder?')) return;
+
+            const card = buttonElement.closest('.medicine-card');
+            fetch(`/delete_medicine/${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        card.classList.add('removing');
+                        card.addEventListener('transitionend', () => {
+                            card.remove();
+                            allMedicines = allMedicines.filter(m => m.id !== id);
+                            if (allMedicines.length === 0) {
+                                document.getElementById('no-medicines-message').style.display = 'block';
+                            }
+                        });
+                    } else {
+                        alert('Failed to delete medicine: ' + data.error);
+                    }
+                })
+                .catch(error => alert('Network error. Could not delete medicine.'));
+        }
+
+        function checkAlarms() {
+            if (activeAlarmTimer && (new Date().getTime() - activeAlarmTimer < 60000)) {
+                return; 
+            }
+            activeAlarmTimer = null;
+
+            const now = new Date();
+            let hour = now.getHours();
+            const minute = now.getMinutes();
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            hour = hour % 12;
+            hour = hour ? hour : 12;
+            const currentTime = `${hour}:${String(minute).padStart(2, '0')} ${ampm}`;
+
+            if (now.getSeconds() === 0) {
+                allMedicines.forEach(med => {
+                    if (med.times && med.times.includes(currentTime)) {
+                        triggerAlarm(med);
+                    }
+                });
+            }
+        }
+
+        async function triggerAlarm(medicine) {
+            activeAlarmTimer = new Date().getTime();
+
+            const alarmModal = document.getElementById('alarm-modal');
+            document.getElementById('alarm-title').textContent = `Time for ${medicine.medicineName}`;
+            document.getElementById('alarm-details').textContent = `Please take your dosage of: ${medicine.dosage}`;
+            
+            if (alarmAudio) alarmAudio.pause();
+            
+            const soundUrl = medicine.sound || '/sounds/standard-bell.mp3';
+            alarmAudio = new Audio(soundUrl);
+            alarmAudio.crossOrigin = "anonymous";
+            alarmAudio.loop = true;
+
+            if (canPlayAudio) {
+                try {
+                    await alarmAudio.play();
+                } catch (err) {
+                    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                }
+            } else {
+                if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+            }
+            
+            alarmModal.classList.add('active');
+
+            document.getElementById('alarm-ok-btn').onclick = () => {
+                if (alarmAudio) {
+                    alarmAudio.pause();
+                    alarmAudio.currentTime = 0;
+                }
+                alarmModal.classList.remove('active');
+                activeAlarmTimer = new Date().getTime();
+            };
+        }
+    </script>
+</body>
+</html>

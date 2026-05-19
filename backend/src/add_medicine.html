@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MediMind - Add Medicine</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f7f8fa;
+            padding-bottom: 80px; /* Space for nav bar */
+
+        }
+
+        /* Header */
+        .header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .header a {
+            text-decoration: none;
+            color: #1d2c4b;
+            font-size: 28px;
+            margin-right: 15px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: #1d2c4b;
+        }
+        .header .subtitle {
+            margin: 2px 0 0;
+            font-size: 14px;
+            color: #657786;
+        }
+
+        /* Progress Bar (Tabs) */
+        .progress {
+            display: flex;
+            background-color: white;
+            padding-bottom: 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .progress .step {
+            flex-grow: 1;
+            text-align: center;
+            padding: 10px 0;
+            color: #ccc;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            user-select: none;
+        }
+        .progress .step.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+        }
+
+        /* Page Content */
+        .content {
+            padding: 20px;
+            padding-bottom: 100px; /* Space for buttons */
+        }
+        .page {
+            display: none; /* Hide all pages by default */
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .page.active {
+            display: block; /* Show only the active page */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px; /* Prevent iOS zoom on focus */
+        }
+
+        /* --- Page 2: Schedule Styles --- */
+        .freq-options {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+        .freq-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 10px;
+            background-color: #e9ecef;
+            color: #6c757d;
+            border-radius: 8px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .freq-tab.active {
+            background-color: white;
+            color: #1d2c4b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .reminder-times-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .reminder-times-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #1d2c4b;
+        }
+        .add-time-btn {
+            background: none;
+            border: 1px solid #007bff;
+            color: #007bff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .time-picker-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 15px; /* Space between cards */
+        }
+        .time-picker-title {
+            color: #657786;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .time-picker-body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .time-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .time-label {
+            font-size: 12px;
+            color: #657786;
+            margin-bottom: 8px;
+        }
+        .time-btn {
+            border: none;
+            background-color: #eaf0f6;
+            color: #1d2c4b;
+            width: 44px;
+            height: 36px;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+            touch-action: manipulation; /* Prevent zoom on tap */
+        }
+        .time-display {
+            background-color: #1d2c4b;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 8px;
+            width: 44px;
+            text-align: center;
+            margin: 8px 0;
+        }
+        .time-separator {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1d2c4b;
+            padding-bottom: 15px; /* To align with numbers */
+        }
+        .ampm-toggle {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ampm-btn {
+            border: none;
+            background-color: #eaf0f6;
+            color: #1d2c4b;
+            padding: 10px;
+            width: 60px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .ampm-btn.active {
+            background-color: #1d2c4b;
+            color: white;
+        }
+        
+        /* --- Page 3: Alert Styles --- */
+         .sound-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .sound-option.selected {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        .sound-option .play-btn {
+            cursor: pointer;
+            color: #007bff;
+            font-size: 18px;
+        }
+
+        /* Button Styles */
+        .btn-container {
+            position: fixed;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            background-color: #f7f8fa;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #e0e0e0;
+            display: none; /* Hidden by default */
+        }
+        .btn-container.active {
+            display: flex;
+        }
+        .btn {
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            width: 48%;
+            text-align: center;
+            font-weight: bold;
+        }
+        .btn-secondary {
+            background-color: #e9ecef;
+            color: #1d2c4b;
+        }
+        .btn-primary {
+            background-color: #1d2c4b;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-full {
+             width: 100%;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #e0e0e0;
+        }
+        .nav a {
+            text-align: center;
+            color: #666;
+            text-decoration: none;
+        }
+        .nav a.active {
+            color: #007bff;
+            font-weight: bold;
+        }
+        
+        .nav a.active div:first-child {
+            background-color: #eaf0f6;
+            border-radius: 16px;
+            padding: 4px 16px;
+         }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/">&larr;</a>
+        <div>
+            <h1>Add Medicine</h1>
+            <p class="subtitle">Step by step</p>
+        </div>
+    </div>
+
+    <div class="progress">
+        <div class="step active" data-step="1">Details</div>
+        <div class="step" data-step="2">Schedule</div>
+        <div class="step" data-step="3">Alert</div>
+    </div>
+
+    <div class="content">
+        <!-- Page 1: Details -->
+        <div id="page-1" class="page active">
+            <div class="form-group">
+                <label for="medicine-name">Medicine Name *</label>
+                <input type="text" id="medicine-name" placeholder="e.g., Aspirin, Vitamin D">
+            </div>
+            <div class="form-group">
+                <label for="dosage">Dosage *</label>
+                <input type="text" id="dosage" placeholder="e.g., 1 pill, 5ml, 2 tablets">
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes (Optional)</label>
+                <textarea id="notes" rows="3" placeholder="e.g., Take with food, Before bedtime"></textarea>
+            </div>
+        </div>
+
+        <!-- Page 2: Schedule -->
+        <div id="page-2" class="page">
+            <div class="freq-options">
+                <div class="freq-tab active">Once a Week</div>
+                <div class="freq-tab">Custom Schedule</div>
+            </div>
+            <div class="reminder-times-header">
+                <h3>Reminder Times</h3>
+                <button class="add-time-btn" onclick="addTimePicker()">+ Add Time</button>
+            </div>
+            <div id="time-pickers-container">
+                <!-- Time pickers will be injected here -->
+            </div>
+        </div>
+
+        <!-- Page 3: Alert -->
+        <div id="page-3" class="page">
+            <h3>Choose Alert Sound</h3>
+            <div class="sound-option selected" data-sound="/sounds/standard-bell.mp3" onclick="selectSound(this)">
+                <div>
+                    <div>Standard Bell</div>
+                    <small>Clear reminder tone</small>
+                </div>
+                <div class="play-btn" onclick="playSound(event, '/sounds/standard-bell.mp3')">&#9654;</div>
+            </div>
+             <div class="sound-option" data-sound="/sounds/soft-chime.mp3" onclick="selectSound(this)">
+                 <div>
+                    <div>Soft Chime</div>
+                    <small>Gentle notification sound</small>
+                </div>
+                <div class="play-btn" onclick="playSound(event, '/sounds/soft-chime.mp3')">&#9654;</div>
+            </div>
+            <div class="sound-option" data-sound="/sounds/urgent-alarm.mp3" onclick="selectSound(this)">
+                <div>
+                    <div>Urgent Alarm</div>
+                    <small>Attention-grabbing alert</small>
+                </div>
+                <div class="play-btn" onclick="playSound(event, '/sounds/urgent-alarm.mp3')">&#9654;</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buttons -->
+    <div id="btn-container-1" class="btn-container active">
+        <button class="btn btn-primary btn-full" onclick="navigateTo(2)">Continue</button>
+    </div>
+    <div id="btn-container-2" class="btn-container">
+        <button class="btn btn-secondary" onclick="navigateTo(1)">Back</button>
+        <button class="btn btn-primary" onclick="navigateTo(3)">Continue</button>
+    </div>
+    <div id="btn-container-3" class="btn-container">
+        <button class="btn btn-secondary" onclick="navigateTo(2)">Back</button>
+        <button class="btn btn-success" onclick="saveMedicine()">✓ Save Medicine</button>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <a href="/">
+            <div>🏠</div>
+            <div>Home</div>
+        </a>
+        <a href="/add-medicine" class="active">
+            <div>+</div>
+            <div>Add Medicine</div>
+        </a>
+        <a href="/history">
+            <div>🕒</div>
+            <div>History</div>
+        </a>
+        <a href="/settings">
+            <div>⚙️</div>
+            <div>Settings</div>
+        </a>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const totalPages = 3;
+        let timePickers = [];
+        let previewAudio = new Audio();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            previewAudio.crossOrigin = "anonymous";
+            showPage(currentPage);
+            addTimePicker();
+        });
+
+        function showPage(pageNumber) {
+            document.querySelectorAll('.page, .btn-container').forEach(el => el.classList.remove('active'));
+            document.querySelector(`#page-${pageNumber}`).classList.add('active');
+            document.querySelector(`#btn-container-${pageNumber}`).classList.add('active');
+            document.querySelectorAll('.progress .step').forEach(step => {
+                step.classList.remove('active');
+                if (parseInt(step.dataset.step) === pageNumber) step.classList.add('active');
+            });
+        }
+
+        function navigateTo(pageNumber) {
+            if (pageNumber >= 1 && pageNumber <= totalPages) {
+                currentPage = pageNumber;
+                showPage(currentPage);
+            }
+        }
+
+        function updateTimeDisplay(id) {
+            const time = timePickers.find(t => t.id === id);
+            if (!time) return;
+            document.querySelector(`#hour-display-${id}`).textContent = String(time.hour);
+            document.querySelector(`#minute-display-${id}`).textContent = String(time.minute).padStart(2, '0');
+            document.querySelector(`#am-btn-${id}`).classList.toggle('active', time.ampm === 'AM');
+            document.querySelector(`#pm-btn-${id}`).classList.toggle('active', time.ampm === 'PM');
+        }
+
+        function adjustTime(id, part, amount) {
+            const time = timePickers.find(t => t.id === id);
+            if (!time) return;
+            if (part === 'hour') {
+                time.hour += amount;
+                if (time.hour > 12) time.hour = 1;
+                if (time.hour < 1) time.hour = 12;
+            } else if (part === 'minute') {
+                time.minute += amount;
+                if (time.minute >= 60) time.minute = 0;
+                if (time.minute < 0) time.minute = 59;
+            }
+            updateTimeDisplay(id);
+        }
+
+        function setAmPm(id, value) {
+            const time = timePickers.find(t => t.id === id);
+            if(time) {
+                time.ampm = value;
+                updateTimeDisplay(id);
+            }
+        }
+
+        function addTimePicker() {
+            const id = Date.now();
+            const now = new Date();
+            let hour = now.getHours();
+            const minute = now.getMinutes();
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            hour = hour % 12;
+            hour = hour ? hour : 12;
+
+            const time = { id, hour, minute, ampm };
+            timePickers.push(time);
+
+            const container = document.getElementById('time-pickers-container');
+            const pickerDiv = document.createElement('div');
+            pickerDiv.className = 'time-picker-card';
+            pickerDiv.id = `time-picker-${id}`;
+            pickerDiv.innerHTML = `
+                <div class="time-picker-title">Time ${timePickers.length}</div>
+                <div class="time-picker-body">
+                    <div class="time-column">
+                        <div class="time-label">Hour</div>
+                        <button class="time-btn" onclick="adjustTime(${id}, 'hour', 1)">▲</button>
+                        <div class="time-display" id="hour-display-${id}"></div>
+                        <button class="time-btn" onclick="adjustTime(${id}, 'hour', -1)">▼</button>
+                    </div>
+                    <div class="time-separator">:</div>
+                    <div class="time-column">
+                        <div class="time-label">Minute</div>
+                        <button class="time-btn" onclick="adjustTime(${id}, 'minute', 1)">▲</button>
+                        <div class="time-display" id="minute-display-${id}"></div>
+                        <button class="time-btn" onclick="adjustTime(${id}, 'minute', -1)">▼</button>
+                    </div>
+                    <div class="ampm-toggle">
+                        <button id="am-btn-${id}" class="ampm-btn" onclick="setAmPm(${id}, 'AM')">AM</button>
+                        <button id="pm-btn-${id}" class="ampm-btn" onclick="setAmPm(${id}, 'PM')">PM</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(pickerDiv);
+            updateTimeDisplay(id);
+        }
+
+        function selectSound(element) {
+            document.querySelectorAll('.sound-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        function playSound(event, soundUrl) {
+            event.stopPropagation();
+            previewAudio.pause();
+            previewAudio.src = soundUrl;
+            const playPromise = previewAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.error("Audio preview failed:", error);
+                    alert("Could not play sound. Please check your browser's permissions.");
+                });
+            }
+        }
+
+        function saveMedicine() {
+            const medicineName = document.getElementById('medicine-name').value;
+            const dosage = document.getElementById('dosage').value;
+            const notes = document.getElementById('notes').value;
+
+            if (!medicineName || !dosage) {
+                alert('Please fill in the Medicine Name and Dosage.');
+                navigateTo(1);
+                return;
+            }
+
+            const times = timePickers.map(t => `${t.hour}:${String(t.minute).padStart(2, '0')} ${t.ampm}`);
+            const selectedSoundOption = document.querySelector('.sound-option.selected');
+            const sound = selectedSoundOption ? selectedSoundOption.dataset.sound : '/sounds/standard-bell.mp3';
+
+            const medicineData = { medicineName, dosage, notes, times, sound };
+
+            fetch('/save_medicine', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(medicineData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/history';
+                } else {
+                    alert('Error saving medicine: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Network error saving medicine.');
+            });
+        }
+
+        document.querySelectorAll('.progress .step').forEach(step => {
+            step.addEventListener('click', () => navigateTo(parseInt(step.dataset.step)));
+        });
+
+    </script>
+</body>
+</html>

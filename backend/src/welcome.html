@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>MediMind - Welcome</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: #f7f8fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            padding: 20px;
+            background-color: white;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #1d2c4b;
+        }
+
+        .header p {
+            margin: 4px 0 0;
+            font-size: 16px;
+            color: #657786;
+        }
+
+        .content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .pill-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #eaf0f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .pill-icon svg {
+            width: 40px;
+            height: 40px;
+            color: #007bff;
+        }
+
+        .content h2 {
+            font-size: 22px;
+            color: #1d2c4b;
+            margin: 0 0 8px;
+        }
+
+        .content p {
+            color: #657786;
+            font-size: 16px;
+            max-width: 300px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 30px;
+            border-radius: 28px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #1d2c4b;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .nav a {
+            text-align: center;
+            color: #666;
+            text-decoration: none;
+        }
+
+        .nav a.active {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+         .nav a.active div:first-child {
+            background-color: #eaf0f6;
+            border-radius: 16px;
+            padding: 4px 16px;
+         }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MediMind</h1>
+        <p>Your medicine companion</p>
+    </div>
+
+    <div class="content">
+        <div class="pill-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+            </svg>
+        </div>
+        <h2>No Medicines Yet</h2>
+        <p>Start by adding your first medicine reminder. We'll help you stay on track!</p>
+        <a href="/add-medicine" class="btn">+ Add Your First Medicine</a>
+    </div>
+
+    <div class="nav">
+        <a href="/" class="active">
+            <div>🏠</div>
+            <div>Home</div>
+        </a>
+        <a href="/add-medicine">
+            <div>+</div>
+            <div>Add Medicine</div>
+        </a>
+        <a href="/history">
+            <div>🕒</div>
+            <div>History</div>
+        </a>
+        <a href="/settings">
+            <div>⚙️</div>
+            <div>Settings</div>
+        </a>
+    </div>
+</body>
+</html>
