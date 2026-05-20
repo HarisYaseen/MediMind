@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -91,19 +92,28 @@ class NotificationService {
 
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(hour, minute);
 
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String ringtoneUri = prefs.getString('selected_ringtone_uri') ?? 'content://settings/system/alarm_alert';
+    final bool isSilent = ringtoneUri == 'silent';
+    final String channelId = 'medimind_ringing_looping_alarms_${ringtoneUri.hashCode}';
+    final String channelName = ringtoneUri == 'content://settings/system/alarm_alert'
+        ? 'Medicine Looping Alarms (Alarm)'
+        : ringtoneUri == 'content://settings/system/ringtone'
+            ? 'Medicine Looping Alarms (Ringtone)'
+            : 'Medicine Looping Alarms (Notification)';
+
     // Strong repeating alarm vibration pattern
     final Int64List vibrationPattern = Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000]);
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'medimind_ringing_looping_alarms_v1', // Brand new channel ID to force Android to create a looping channel!
-      'Medicine Looping Alarms',
+      channelId,
+      channelName,
       channelDescription: 'Continuous looping alarms for scheduled medications',
       importance: Importance.max,
       priority: Priority.high,
-      playSound: true,
-      // Connects directly to default system alarm ringtone natively!
-      sound: const UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+      playSound: !isSilent,
+      sound: isSilent ? null : UriAndroidNotificationSound(ringtoneUri),
       enableVibration: true,
       vibrationPattern: vibrationPattern,
       ongoing: true, // Persistent until handled
@@ -140,18 +150,28 @@ class NotificationService {
   Future<void> showNotification(int id, String title, String body) async {
     if (kIsWeb) return;
     
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String ringtoneUri = prefs.getString('selected_ringtone_uri') ?? 'content://settings/system/alarm_alert';
+    final bool isSilent = ringtoneUri == 'silent';
+    final String channelId = 'medimind_ringing_looping_alarms_${ringtoneUri.hashCode}';
+    final String channelName = ringtoneUri == 'content://settings/system/alarm_alert'
+        ? 'Medicine Looping Alarms (Alarm)'
+        : ringtoneUri == 'content://settings/system/ringtone'
+            ? 'Medicine Looping Alarms (Ringtone)'
+            : 'Medicine Looping Alarms (Notification)';
+
     // Strong repeating alarm vibration pattern (vibrate 1s, pause 0.5s, vibrate 1s, etc.)
     final Int64List vibrationPattern = Int64List.fromList([0, 1000, 500, 1000, 500, 1000, 500, 1000]);
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'medimind_ringing_looping_alarms_v1', // Route to the looping channel!
-      'Medicine Looping Alarms',
+      channelId,
+      channelName,
       channelDescription: 'Continuous looping alarms for scheduled medications',
       importance: Importance.max,
       priority: Priority.high,
-      playSound: true,
-      sound: const UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+      playSound: !isSilent,
+      sound: isSilent ? null : UriAndroidNotificationSound(ringtoneUri),
       enableVibration: true,
       vibrationPattern: vibrationPattern,
       ongoing: true, // Persistent until handled

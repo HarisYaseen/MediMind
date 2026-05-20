@@ -13,7 +13,7 @@ class MedicineProvider with ChangeNotifier {
 
   // Statically editable server URL or IP matching your network/cloud!
   // Set this to your Render URL (e.g., 'https://medimind-backend.onrender.com') when deployed!
-  static String serverUrl = '192.168.100.4';
+  static String serverUrl = 'https://harisyaseen62.pythonanywhere.com';
 
   // Uses the cloud server URL if configured, otherwise falls back to local dev server IPs
   String get _baseUrl {

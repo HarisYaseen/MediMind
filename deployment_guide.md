@@ -1,82 +1,83 @@
-# MediMind Backend Deployment Guide (Render)
+# MediMind Backend Deployment Guide (PythonAnywhere)
 
-This guide shows you how to host your Python Flask backend (`main.py` + Firestore integration) online 24/7 using the **Render** free tier. Once deployed, the server is always active, allowing your Flutter mobile application to work perfectly from anywhere in the world!
-
----
-
-## What We Have Already Prepared for You
-1. **Dynamic Port Binding (`backend/main.py`):** Configured the server to dynamically read the environment `PORT` variable assigned by Render.
-2. **Production-Ready Server (`backend/requirements.txt`):** Added `gunicorn` to dependencies.
-3. **App Runner Config (`backend/Procfile`):** Created a `Procfile` instructing Render to start the app using `gunicorn main:app`.
-4. **Cloud-Ready Flutter app (`mobile_app/.../medicine_provider.dart`):** Upgraded `_baseUrl` to support full cloud URLs seamlessly.
+This guide shows you how to host your Python Flask backend (`main.py` + Firestore integration) online 24/7 using **PythonAnywhere**'s completely free tier with **zero credit card required**!
 
 ---
 
-## Step 1: Create a GitHub Repository & Push Your Code
+## Step 1: Create a Free Account
+1. Open your browser and go to: **[PythonAnywhere Signup](https://www.pythonanywhere.com/registration/register/lite/)**.
+2. Fill in your details to create a free **"Beginner account"**.
+3. **Choose your username carefully** (for example, `harisyaseen`). Your backend's public URL will be:
+   `https://YOUR_USERNAME.pythonanywhere.com`
 
-Since Render connects directly to GitHub, you need to push your workspace code to a new repository first.
+---
 
-1. Go to [GitHub](https://github.com/) and log in.
-2. Click **New Repository**.
-3. Name it `MediMind` (or any name you prefer), keep it **Public** (or Private), and click **Create repository**.
-4. In your terminal at `E:\Medi Mind`, run the following commands to initialize Git and push the project:
+## Step 2: Import Your Code (Clone from GitHub)
+1. Once logged in, click on the **"Consoles"** tab in the top right menu of your PythonAnywhere Dashboard.
+2. Under *New console*, click on **"Bash"**. This will open an online command terminal.
+3. Paste the following command into the terminal and press **Enter** to pull your codebase:
+   ```bash
+   git clone https://github.com/HarisYaseen/MediMind.git
+   ```
 
-```powershell
-# 1. Initialize git (if not already done)
-git init
+---
 
-# 2. Add all files to staging
-git add .
+## Step 3: Create the Web App
+1. Click the **Menu** icon (three horizontal lines) in the top-right of your screen and select **"Web"**.
+2. Click the blue **"Add a new web app"** button.
+3. Click *Next*, then select **"Manual Configuration"** (do NOT click "Flask" directly; choosing "Manual Configuration" allows us to point the app to your custom folder structure).
+4. Select **"Python 3.10"** (or Python 3.9) and click *Next* to finish.
 
-# 3. Create initial commit
-git commit -m "Prepare backend and frontend for cloud deployment"
+---
 
-# 4. Set default branch to main
-git branch -M main
+## Step 4: Configure the Web App Settings
+Once the web app is created, you will see a settings dashboard. Configure the following sections:
 
-# 5. Link to your new GitHub repository
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git
+1. **Under the "Code" section:**
+   * **Source code:** Set this to:
+     `/home/YOUR_USERNAME/MediMind/backend`
+   * **Working directory:** Set this to:
+     `/home/YOUR_USERNAME/MediMind/backend`
 
-# 6. Push code to GitHub
-git push -u origin main
+2. **WSGI Configuration File (Crucial):**
+   * Under the *Code* section, locate the link next to **"WSGI configuration file"** (looks like `/var/www/YOUR_USERNAME_pythonanywhere_com_wsgi.py`). 
+   * Click on this link. It will open an online text editor.
+   * **Delete all the text currently in that file**, paste the following block in its place, and click **Save** (top right):
+
+```python
+import sys
+import os
+
+# Point to your backend project folder
+project_home = '/home/YOUR_USERNAME/MediMind/backend'
+if project_home not in sys.path:
+    sys.path = [project_home] + sys.path
+
+# Set the working directory
+os.chdir(project_home)
+
+# Import the Flask app instance from main.py as "application"
+from main import app as application
 ```
 
 ---
 
-## Step 2: Deploy to Render (Free Web Service)
-
-1. Go to [Render](https://render.com/) and sign up or log in.
-2. Click the blue **New +** button in the top right and select **Web Service**.
-3. Choose **Connect a repository** and select your newly created GitHub repository.
-4. Fill in the deployment details exactly as follows:
-   * **Name:** `medimind-backend` (or any name)
-   * **Region:** Choose the one closest to you (e.g., *Singapore* or *Oregon*)
-   * **Branch:** `main`
-   * **Root Directory:** `backend` *(This is CRITICAL! It tells Render to build inside the backend folder since your project is structured with frontend and backend subfolders).*
-   * **Runtime:** `Python`
-   * **Build Command:** `pip install -r requirements.txt`
-   * **Start Command:** `gunicorn main:app`
-   * **Instance Type:** `Free`
-5. Click **Deploy Web Service** at the bottom of the page!
-
-Render will now pull the code, install dependencies, and host the server. Within 2-3 minutes, you will see a green status saying **"Live"**, and your server's public URL will be visible in the top-left (e.g. `https://medimind-backend.onrender.com`).
+## Step 5: Install Dependencies & Go Live!
+1. Go back to your active Bash Console (or go to *Consoles* and open a new *Bash* console).
+2. Paste the following command to install the required Python packages into your account and press **Enter**:
+   ```bash
+   pip install --user flask firebase-admin flask-cors
+   ```
+3. Once the installations finish, go back to the **"Web"** tab in the top menu.
+4. Click the big green **"Reload YOUR_USERNAME.pythonanywhere.com"** button at the top of the page.
 
 ---
 
-## Step 3: Connect Your Mobile App to the Cloud Server
-
-1. Open `e:\Medi Mind\mobile_app\lib\providers\medicine_provider.dart` in VS Code.
-2. Change the `serverUrl` string (around line 14) from your local IP to your new Render public URL:
-
-```dart
-// REPLACE:
-static String serverUrl = '192.168.100.4';
-
-// WITH YOUR RENDER URL:
-static String serverUrl = 'https://medimind-backend.onrender.com';
-```
-
-3. Save the file.
-4. Re-run your mobile app using `flutter run`.
-
-**Your app is now 100% connected to a global production cloud server! You can shut down your computer, and the medication reminders and schedules on your mobile phone will continue to fetch, sync, and alert you completely uninterrupted!**
+## Step 6: Connect Your Mobile App!
+Your backend is now live 24/7! 
+1. Open `e:\Medi Mind\mobile_app\lib\providers\medicine_provider.dart`.
+2. Change the `serverUrl` (around line 14) to your new PythonAnywhere URL:
+   ```dart
+   static String serverUrl = 'https://YOUR_USERNAME.pythonanywhere.com';
+   ```
+3. Re-run your mobile app using `flutter run` on your device, and you are 100% cloud-synced!
