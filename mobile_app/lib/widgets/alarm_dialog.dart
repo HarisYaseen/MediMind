@@ -90,120 +90,131 @@ class _AlarmDialogState extends State<AlarmDialog> with SingleTickerProviderStat
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Alarm Ringing Header (Pulsing Icon)
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: Transform.rotate(
-                    angle: _rotationAnimation.value,
-                    child: child,
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red.shade100, width: 4),
-                ),
-                child: const Icon(
-                  Icons.alarm_on_rounded,
-                  color: Colors.red,
-                  size: 56,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Main Alert Title
-            const Text(
-              'MEDICINE REMINDER!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: Colors.red,
-                letterSpacing: 2.0,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Time: ${widget.scheduledTime}',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Medicine Details Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: lightBlue.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: lightBlue, width: 1.5),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    widget.medicine.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Dosage: ${widget.medicine.dosage}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Alarm Ringing Header (Pulsing Icon)
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _scaleAnimation.value,
+                          child: Transform.rotate(
+                            angle: _rotationAnimation.value,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.red.shade100, width: 4),
+                        ),
+                        child: const Icon(
+                          Icons.alarm_on_rounded,
+                          color: Colors.red,
+                          size: 56,
+                        ),
                       ),
                     ),
-                  ),
-                  if (widget.medicine.notes != null && widget.medicine.notes!.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    const Divider(color: Colors.black12, height: 1),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Instructions:',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.medicine.notes!,
+                    const SizedBox(height: 24),
+
+                    // Main Alert Title
+                    const Text(
+                      'MEDICINE REMINDER!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
-                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.red,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Time: ${widget.scheduledTime}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                         color: Colors.grey[600],
                       ),
                     ),
+                    const SizedBox(height: 20),
+
+                    // Medicine Details Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: lightBlue.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: lightBlue, width: 1.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            widget.medicine.name,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Dosage: ${widget.medicine.dosage}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ),
+                          if (widget.medicine.notes != null && widget.medicine.notes!.isNotEmpty) ...[
+                            const SizedBox(height: 14),
+                            const Divider(color: Colors.black12, height: 1),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Instructions:',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.medicine.notes!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ],
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
 
             // Trigger buttons
             Row(

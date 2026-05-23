@@ -5,8 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:myapp/providers/medicine_provider.dart';
 import 'package:myapp/models/medicine.dart';
 import 'package:simple_barcode_scanner/simple_barcode_scanner.dart';
-import 'package:myapp/models/universal_medicine.dart';
-import 'package:myapp/data/universal_medicines.dart';
 import 'package:flutter/foundation.dart';
 import 'package:myapp/widgets/web_barcode_scanner_dialog.dart';
 class AddMedicineScreen extends StatefulWidget {
@@ -29,32 +27,138 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   final List<TimeOfDay> _selectedTimes = [];
   final List<String> _weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-  List<UniversalMedicine> _filteredSuggestions = [];
-
-  UniversalMedicine? _findUniversalMedicine(String query) {
-    for (var med in universalMedicines) {
-      if (med.barcode == query || med.name.toLowerCase() == query.toLowerCase()) {
-        return med;
-      }
-    }
-    return null;
+  Future<bool> _showAlignmentGuideDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.qr_code_scanner, color: primaryColor, size: 28),
+              SizedBox(width: 8),
+              Text('Camera Guide', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Hold your phone over the medicine packaging and align the barcode/QR code.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, color: primaryColor),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tip: Make sure the barcode is flat, well-lit, and fits inside the camera box.',
+                        style: TextStyle(color: primaryColor, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context, true);
+                  },
+                  icon: const Icon(Icons.videocam, color: Colors.white),
+                  label: const Text('Open Camera', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    ) ?? false;
   }
 
-  void _populateFromQuery(String query) {
-    final matched = _findUniversalMedicine(query);
-    if (matched != null) {
-      _medicineNameController.text = matched.name;
-      _dosageController.text = matched.dosage;
-      _notesController.text = matched.notes;
-      _filteredSuggestions = [];
+  void _populateFromQuery(String query) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'Gemini AI is analyzing medicine...',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final matched = await Provider.of<MedicineProvider>(context, listen: false)
+          .lookupMedicineAI(query);
+          
+      Navigator.pop(context); // Close loading dialog
+
+      if (matched != null && matched['name'] != null && matched['name'].toString().isNotEmpty) {
+        setState(() {
+          _medicineNameController.text = matched['name'];
+          _dosageController.text = matched['dosage'] ?? '';
+          _notesController.text = matched['notes'] ?? '';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('AI auto-filled details for ${matched['name']}!'),
+            backgroundColor: primaryColor,
+          ),
+        );
+      } else {
+        setState(() {
+          _medicineNameController.text = query;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gemini API could not identify this code. Please enter details manually.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Safe dismiss
+      setState(() {
+        _medicineNameController.text = query;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Auto-filled details for ${matched.name}!'),
-          backgroundColor: primaryColor,
+          content: Text('AI search error: $e. Entering manually.'),
+          backgroundColor: Colors.red,
         ),
       );
-    } else {
-      _medicineNameController.text = query;
     }
   }
 
@@ -145,144 +249,147 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   }
 
   Widget _buildAddMedicineView() {
-    return Stack(
-      clipBehavior: Clip.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const Text(
+          'Medicine Name',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+        ),
+        const SizedBox(height: 8),
+        Row(
           children: [
-            const Text(
-              'Medicine Name',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _medicineNameController,
-              onChanged: (value) {
-                // If direct barcode or name match, auto-populate instantly!
-                final matched = _findUniversalMedicine(value);
-                if (matched != null) {
-                  _populateFromQuery(value);
-                  return;
-                }
-
-                setState(() {
-                  if (value.isEmpty) {
-                    _filteredSuggestions = [];
-                  } else {
-                    _filteredSuggestions = universalMedicines
-                        .where((med) =>
-                            med.name.toLowerCase().contains(value.toLowerCase()) ||
-                            med.barcode.contains(value))
-                        .toList();
-                  }
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Enter medicine name',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.qr_code_scanner, color: primaryColor),
-                  onPressed: () async {
-                    String? res;
-                    if (kIsWeb) {
-                      res = await showDialog<String>(
-                        context: context,
-                        builder: (context) => const WebBarcodeScannerDialog(),
-                      );
-                    } else {
-                      var scanRes = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SimpleBarcodeScannerPage(),
-                        ),
-                      );
-                      if (scanRes is String && scanRes != '-1') {
-                        res = scanRes;
-                      }
-                    }
-
-                    if (res != null && res.isNotEmpty) {
-                      setState(() {
-                        _populateFromQuery(res!);
-                      });
-                    }
-                  },
+            Expanded(
+              child: TextField(
+                controller: _medicineNameController,
+                decoration: const InputDecoration(
+                  hintText: 'Enter medicine name or scan barcode',
+                  border: OutlineInputBorder(),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Dosage',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _dosageController,
-              decoration: const InputDecoration(
-                hintText: 'Enter dosage',
-                border: OutlineInputBorder(),
+            const SizedBox(width: 8),
+            // Premium AI Search Button
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              tooltip: 'Search Medicine via Gemini AI',
+              style: IconButton.styleFrom(
+                backgroundColor: primaryColor,
+                padding: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
+              onPressed: () {
+                final query = _medicineNameController.text.trim();
+                if (query.isNotEmpty) {
+                  _populateFromQuery(query);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a medicine name or scan a barcode first')),
+                  );
+                }
+              },
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Notes',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'Enter notes',
-                border: OutlineInputBorder(),
+            const SizedBox(width: 8),
+            // Premium Barcode Scan Button
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+              tooltip: 'Scan Barcode',
+              style: IconButton.styleFrom(
+                backgroundColor: primaryColor,
+                padding: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: _next,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: const Text('Next'),
+              onPressed: () async {
+                String? res;
+                if (kIsWeb) {
+                  res = await showDialog<String>(
+                    context: context,
+                    builder: (context) => const WebBarcodeScannerDialog(),
+                  );
+                } else {
+                  // Show the alignment guide first!
+                  final proceed = await _showAlignmentGuideDialog();
+                  if (!proceed) return;
+
+                  var scanRes = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SimpleBarcodeScannerPage(),
+                    ),
+                  );
+                  if (scanRes is String) {
+                    final cleanRes = scanRes.trim();
+                    if (cleanRes.isNotEmpty && 
+                        cleanRes != '-1' && 
+                        cleanRes.toLowerCase() != 'null' && 
+                        cleanRes.toLowerCase() != 'failed') {
+                      res = cleanRes;
+                    }
+                  }
+                }
+
+                if (res != null && res.isNotEmpty) {
+                  // Inform the user exactly what string was read by the camera
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Scanned code: $res'),
+                      backgroundColor: primaryColor,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                  _populateFromQuery(res!);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Scan cancelled or no clear code detected'),
+                      backgroundColor: Colors.grey,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
             ),
           ],
         ),
-        if (_filteredSuggestions.isNotEmpty)
-          Positioned(
-            top: 88, // Positioned perfectly below the Medicine Name TextField
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: _filteredSuggestions.take(4).map((med) {
-                  return ListTile(
-                    leading: const Icon(Icons.medication, color: primaryColor),
-                    title: Text(med.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(med.dosage),
-                    onTap: () {
-                      setState(() {
-                        _populateFromQuery(med.name);
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
+        const SizedBox(height: 16),
+        const Text(
+          'Dosage',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _dosageController,
+          decoration: const InputDecoration(
+            hintText: 'Enter dosage (AI will auto-fill)',
+            border: OutlineInputBorder(),
           ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Notes',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _notesController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Enter safety notes, uses, etc. (AI will auto-fill)',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const Spacer(),
+        ElevatedButton(
+          onPressed: _next,
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
+          child: const Text('Next'),
+        ),
       ],
     );
   }

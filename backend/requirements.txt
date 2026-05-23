@@ -6,3 +6,5 @@ autopep8
 flask
 firebase-admin
 flask-cors
+google-generativeai
+python-dotenv
