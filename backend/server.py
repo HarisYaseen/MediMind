@@ -169,66 +169,99 @@ def lookup_medicine():
         
         if is_barcode and not resolved_name:
             import requests
-            # Try Open FDA NDC database
+
+            # --- API 1: OpenProductsFacts (best for global consumer medicines) ---
             try:
-                url = f"https://api.fda.gov/drug/ndc.json?search=package_ndc:\"{query.strip()}\"&limit=1"
-                r = requests.get(url, timeout=5)
+                r = requests.get(
+                    f"https://world.openproductsfacts.org/api/v2/product/{query.strip()}.json",
+                    headers={'User-Agent': 'MediMind-App/1.0'},
+                    timeout=4
+                )
                 if r.status_code == 200:
-                    results = r.json().get('results', [])
-                    if results:
-                        resolved_name = results[0].get('brand_name') or results[0].get('generic_name')
+                    d = r.json()
+                    if d.get('status') == 1:
+                        resolved_name = d.get('product', {}).get('product_name') or \
+                                        d.get('product', {}).get('generic_name')
                         if resolved_name:
-                            print(f"FDA matched EAN {query} to product: {resolved_name}")
+                            print(f"OpenProductsFacts: {query} -> {resolved_name}")
             except Exception as e:
-                print(f"FDA lookup skipped: {e}")
+                print(f"OpenProductsFacts failed: {e}")
 
-            # Try RxNorm secondary
+            # --- API 2: OpenBeautyFacts (catches health/pharma products) ---
             if not resolved_name:
                 try:
-                    url = f"https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id={query.strip()}"
-                    r = requests.get(url, headers={'Accept': 'application/json'}, timeout=5)
+                    r = requests.get(
+                        f"https://world.openbeautyfacts.org/api/v2/product/{query.strip()}.json",
+                        headers={'User-Agent': 'MediMind-App/1.0'},
+                        timeout=4
+                    )
                     if r.status_code == 200:
-                        concept_properties = r.json().get('idGroup', {}).get('rxconceptProperties', [])
-                        if concept_properties:
-                            resolved_name = concept_properties[0].get('name')
+                        d = r.json()
+                        if d.get('status') == 1:
+                            resolved_name = d.get('product', {}).get('product_name')
                             if resolved_name:
-                                print(f"RxNorm matched EAN {query} to concept: {resolved_name}")
+                                print(f"OpenBeautyFacts: {query} -> {resolved_name}")
                 except Exception as e:
-                    print(f"RxNorm lookup skipped: {e}")
+                    print(f"OpenBeautyFacts failed: {e}")
 
-            # final fallback to OpenFoodFacts EAN Database
+            # --- API 3: OpenFDA by brand name search (US + international brands) ---
             if not resolved_name:
                 try:
-                    url = f"https://world.openfoodfacts.org/api/v0/product/{query.strip()}.json"
-                    headers = {'User-Agent': 'MediMind - MobileApp - Version 1.0'}
-                    r = requests.get(url, headers=headers, timeout=5)
+                    r = requests.get(
+                        f"https://api.fda.gov/drug/label.json?search=openfda.package_ndc:\"{query.strip()}\"&limit=1",
+                        timeout=4
+                    )
                     if r.status_code == 200:
-                        prod_data = r.json()
-                        resolved_name = prod_data.get('product', {}).get('product_name')
-                        if resolved_name:
-                            print(f"OpenFoodFacts matched EAN {query} to product: {resolved_name}")
+                        results = r.json().get('results', [])
+                        if results:
+                            names = results[0].get('openfda', {}).get('brand_name', [])
+                            if names:
+                                resolved_name = names[0]
+                                print(f"OpenFDA NDC: {query} -> {resolved_name}")
                 except Exception as e:
-                    print(f"OpenFoodFacts lookup skipped: {e}")
+                    print(f"OpenFDA failed: {e}")
+
+            # --- API 4: OpenFoodFacts (last fallback) ---
+            if not resolved_name:
+                try:
+                    r = requests.get(
+                        f"https://world.openfoodfacts.org/api/v0/product/{query.strip()}.json",
+                        headers={'User-Agent': 'MediMind-App/1.0'},
+                        timeout=4
+                    )
+                    if r.status_code == 200:
+                        d = r.json()
+                        resolved_name = d.get('product', {}).get('product_name')
+                        if resolved_name:
+                            print(f"OpenFoodFacts: {query} -> {resolved_name}")
+                except Exception as e:
+                    print(f"OpenFoodFacts failed: {e}")
         
-        # Build prompt dynamically based on lookup result
+        # Build prompt dynamically based on lookup result (Pakistan-aware!)
         if resolved_name:
             search_subject = f"barcode number {query} which maps to the medicine '{resolved_name}'"
         else:
             search_subject = f"query/barcode value '{query}'"
             
         prompt = f"""
-        You are a clinical pharmacy expert and professional medical AI assistant.
+        You are a clinical pharmacy expert specializing in medicines available in Pakistan.
         A user has scanned or searched for a medication with the search subject: {search_subject}.
         
-        Please search or check your clinical database to identify this exact medication:
-        1. If this is a barcode, identify the exact brand name medicine associated with it. If the EAN database mapped it to a product name ('{resolved_name}'), prioritize that exact medicine name and fetch clinical instructions for it.
-        2. If this is a text search, identify the exact medicine name.
-        3. CRITICAL: If you cannot find the barcode in your database, and there was no mapped name, you MUST return the JSON with "name" set to "Unknown Medicine (Barcode: {query})" and "notes" set to "This barcode is not globally indexed yet. Please edit the name and add your dosage details manually." Do NOT leave the name field empty for unindexed barcode numbers. If the query is completely random junk letters, set the name to an empty string "".
+        Pakistani medicines are manufactured by companies like GSK Pakistan, Searle, 
+        Highnoon Laboratories, Barrett Hodgson, PharmEvo, Getz Pharma, Ferozsons, 
+        Martin Dow, and Sanofi Pakistan.
+        
+        Very common Pakistani brands: Panadol, Panadol CF, Panadol Extra, Brufen, 
+        Augmentin, Disprin, ORS, Flagyl, Amoxil, Risek, Nexum, Ponstan, Calpol, 
+        Ventolin, Septran, Ciprofloxacin, Metformin, Amlodipine, Atorvastatin.
+        
+        Try hard to identify this medicine. If the barcode resolved to a product name,
+        use that to look up the correct clinical details.
         
         Provide the details in strict JSON format containing these fields:
-        - "name": The official, brand, or generic name of the medicine (e.g. "Panadol", "Infacol").
+        - "name": The official brand or generic name of the medicine.
         - "dosage": Standard recommended patient dosage instructions.
-        - "notes": Important patient guidelines, what the drug is used for, safety warnings, and potential side effects.
+        - "notes": Important patient guidelines, what it treats, safety warnings, and potential side effects.
         - "barcode": The exact barcode number "{query if is_barcode else ''}" (if this was a barcode scan), or empty string if input was a textual name.
         
         Return ONLY raw, valid JSON. Do not write any markdown code block fences (do not wrap in ```json), introductory text, or explanations.

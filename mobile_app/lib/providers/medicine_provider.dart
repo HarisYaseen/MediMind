@@ -129,55 +129,74 @@ class MedicineProvider with ChangeNotifier {
           ? serverKey
           : 'AIzaSyDEy8q-b8UE44EMz78_bJYLNYVzRoC3j8U';
       
-      // 1. Quick lookup on medical databases (OpenFDA primary, RxNorm secondary, OpenFoodFacts final fallback)
+      // 1. Quick lookup on medical/product databases (OpenProductsFacts, OpenBeautyFacts, OpenFDA NDC label, OpenFoodFacts fallback)
       String? resolvedName;
       if (isBarcode) {
-        // Try Open FDA NDC database
+        // API 1: OpenProductsFacts (catches global consumer medicines)
         try {
-          final String url = 'https://api.fda.gov/drug/ndc.json?search=package_ndc:"$cleanQuery"&limit=1';
-          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 3));
-          if (response.statusCode == 200) {
-            final Map<String, dynamic> fdaData = json.decode(response.body);
-            final List? results = fdaData['results'];
-            if (results != null && results.isNotEmpty) {
-              resolvedName = results[0]['brand_name'] ?? results[0]['generic_name'];
+          final r = await http.get(
+            Uri.parse('https://world.openproductsfacts.org/api/v2/product/$cleanQuery.json'),
+            headers: {'User-Agent': 'MediMind-App/1.0'},
+          ).timeout(const Duration(seconds: 4));
+          if (r.statusCode == 200) {
+            final d = json.decode(r.body);
+            if (d['status'] == 1) {
+              resolvedName = d['product']?['product_name'] ?? d['product']?['generic_name'];
             }
           }
         } catch (e) {
-          print('FDA NDC lookup skipped: $e');
+          print('OpenProductsFacts lookup skipped: $e');
         }
 
-        // Try RxNorm if FDA missed
+        // API 2: OpenBeautyFacts (catches health/pharma products)
         if (resolvedName == null) {
           try {
-            final String url = 'https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id=$cleanQuery';
-            final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'}).timeout(const Duration(seconds: 3));
-            if (response.statusCode == 200) {
-              final Map<String, dynamic> rxData = json.decode(response.body);
-              final String? conceptName = rxData['idGroup']?['rxconceptProperties']?[0]?['name'];
-              if (conceptName != null && conceptName.isNotEmpty) {
-                resolvedName = conceptName;
+            final r = await http.get(
+              Uri.parse('https://world.openbeautyfacts.org/api/v2/product/$cleanQuery.json'),
+              headers: {'User-Agent': 'MediMind-App/1.0'},
+            ).timeout(const Duration(seconds: 4));
+            if (r.statusCode == 200) {
+              final d = json.decode(r.body);
+              if (d['status'] == 1) {
+                resolvedName = d['product']?['product_name'];
               }
             }
           } catch (e) {
-            print('RxNorm lookup skipped: $e');
+            print('OpenBeautyFacts lookup skipped: $e');
           }
         }
 
-        // final fallback to OpenFoodFacts EAN Database
+        // API 3: OpenFDA by NDC Package code (catches imported/US label matches)
         if (resolvedName == null) {
           try {
-            final String url = 'https://world.openfoodfacts.org/api/v0/product/$cleanQuery.json';
-            final response = await http.get(Uri.parse(url), headers: {
-              'User-Agent': 'MediMind - MobileApp - Version 1.0'
-            }).timeout(const Duration(seconds: 3));
-            
-            if (response.statusCode == 200) {
-              final Map<String, dynamic> prodData = json.decode(response.body);
-              resolvedName = prodData['product']?['product_name'];
+            final r = await http.get(
+              Uri.parse('https://api.fda.gov/drug/label.json?search=openfda.package_ndc:"$cleanQuery"&limit=1'),
+            ).timeout(const Duration(seconds: 4));
+            if (r.statusCode == 200) {
+              final d = json.decode(r.body);
+              final List? names = d['results']?[0]?['openfda']?['brand_name'];
+              if (names != null && names.isNotEmpty) {
+                resolvedName = names[0];
+              }
             }
           } catch (e) {
-            print('Local EAN lookup skipped: $e');
+            print('OpenFDA NDC lookup skipped: $e');
+          }
+        }
+
+        // API 4: OpenFoodFacts (final fallback)
+        if (resolvedName == null) {
+          try {
+            final r = await http.get(
+              Uri.parse('https://world.openfoodfacts.org/api/v0/product/$cleanQuery.json'),
+              headers: {'User-Agent': 'MediMind-App/1.0'},
+            ).timeout(const Duration(seconds: 4));
+            if (r.statusCode == 200) {
+              final d = json.decode(r.body);
+              resolvedName = d['product']?['product_name'];
+            }
+          } catch (e) {
+            print('OpenFoodFacts lookup skipped: $e');
           }
         }
       }
@@ -188,18 +207,24 @@ class MedicineProvider with ChangeNotifier {
           : "query/barcode value '$cleanQuery'";
 
       final String prompt = '''
-You are a clinical pharmacy expert and professional medical AI assistant.
+You are a clinical pharmacy expert specializing in medicines available in Pakistan.
 A user has scanned or searched for a medication with the search subject: $searchSubject.
 
-Please check your clinical database to identify this exact medication:
-1. If this is a barcode, identify the exact brand name medicine associated with it. If the EAN database mapped it to a product name ('$resolvedName'), prioritize that exact medicine name and fetch clinical instructions for it.
-2. If this is a text search, identify the exact medicine name.
-3. CRITICAL: If you cannot find the barcode in your database, and there was no mapped name, you MUST return the JSON with "name" set to "Unknown Medicine (Barcode: $cleanQuery)" and "notes" set to "This barcode is not globally indexed yet. Please edit the name and add your dosage details manually." Do NOT leave the name field empty for unindexed barcode numbers. If the query is completely random junk letters, set the name to an empty string "".
+Pakistani medicines are manufactured by companies like GSK Pakistan, Searle, 
+Highnoon Laboratories, Barrett Hodgson, PharmEvo, Getz Pharma, Ferozsons, 
+Martin Dow, and Sanofi Pakistan.
+
+Very common Pakistani brands: Panadol, Panadol CF, Panadol Extra, Brufen, 
+Augmentin, Disprin, ORS, Flagyl, Amoxil, Risek, Nexum, Ponstan, Calpol, 
+Ventolin, Septran, Ciprofloxacin, Metformin, Amlodipine, Atorvastatin.
+
+Try hard to identify this medicine. If the barcode resolved to a product name,
+use that to look up the correct clinical details.
 
 Provide the details in strict JSON format containing these fields:
-- "name": The official, brand, or generic name of the medicine (e.g. "Panadol", "Infacol").
+- "name": The official brand or generic name of the medicine.
 - "dosage": Standard recommended patient dosage instructions.
-- "notes": Important patient guidelines, what the drug is used for, safety warnings, and potential side effects.
+- "notes": Important patient guidelines, what it treats, safety warnings, and potential side effects.
 - "barcode": The exact barcode number "${isBarcode ? cleanQuery : ''}" (if this was a barcode scan), or empty string if input was a textual name.
 
 Return ONLY raw, valid JSON. Do not write any markdown code block fences (do not wrap in ```json), introductory text, or explanations.
