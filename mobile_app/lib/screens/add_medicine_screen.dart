@@ -181,6 +181,12 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
   }
 
   void _next() {
+    final text = _medicineNameController.text.trim();
+    // If it looks like a barcode and dosage is empty, run the AI lookup first before proceeding to scheduling
+    if (RegExp(r'^\d{8,}$').hasMatch(text) && _dosageController.text.isEmpty) {
+      _populateFromQuery(text);
+      return;
+    }
     setState(() {
       _showSchedule = true;
     });

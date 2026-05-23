@@ -164,22 +164,51 @@ def lookup_medicine():
         model = genai.GenerativeModel('gemini-flash-latest')
         
         # Smart Hybrid Barcode Resolver
-        resolved_name = None
+        resolved_name = data.get("resolved_name")
         is_barcode = query.strip().isdigit()
         
-        if is_barcode:
+        if is_barcode and not resolved_name:
+            import requests
+            # Try Open FDA NDC database
             try:
-                import requests
-                url = f"https://world.openfoodfacts.org/api/v0/product/{query.strip()}.json"
-                headers = {'User-Agent': 'MediMind - MobileApp - Version 1.0'}
-                r = requests.get(url, headers=headers, timeout=5)
+                url = f"https://api.fda.gov/drug/ndc.json?search=package_ndc:\"{query.strip()}\"&limit=1"
+                r = requests.get(url, timeout=5)
                 if r.status_code == 200:
-                    prod_data = r.json()
-                    resolved_name = prod_data.get('product', {}).get('product_name')
-                    if resolved_name:
-                        print(f"Hybrid Resolver matched EAN {query} to product: {resolved_name}")
+                    results = r.json().get('results', [])
+                    if results:
+                        resolved_name = results[0].get('brand_name') or results[0].get('generic_name')
+                        if resolved_name:
+                            print(f"FDA matched EAN {query} to product: {resolved_name}")
             except Exception as e:
-                print(f"EAN Database lookup skipped: {e}")
+                print(f"FDA lookup skipped: {e}")
+
+            # Try RxNorm secondary
+            if not resolved_name:
+                try:
+                    url = f"https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id={query.strip()}"
+                    r = requests.get(url, headers={'Accept': 'application/json'}, timeout=5)
+                    if r.status_code == 200:
+                        concept_properties = r.json().get('idGroup', {}).get('rxconceptProperties', [])
+                        if concept_properties:
+                            resolved_name = concept_properties[0].get('name')
+                            if resolved_name:
+                                print(f"RxNorm matched EAN {query} to concept: {resolved_name}")
+                except Exception as e:
+                    print(f"RxNorm lookup skipped: {e}")
+
+            # final fallback to OpenFoodFacts EAN Database
+            if not resolved_name:
+                try:
+                    url = f"https://world.openfoodfacts.org/api/v0/product/{query.strip()}.json"
+                    headers = {'User-Agent': 'MediMind - MobileApp - Version 1.0'}
+                    r = requests.get(url, headers=headers, timeout=5)
+                    if r.status_code == 200:
+                        prod_data = r.json()
+                        resolved_name = prod_data.get('product', {}).get('product_name')
+                        if resolved_name:
+                            print(f"OpenFoodFacts matched EAN {query} to product: {resolved_name}")
+                except Exception as e:
+                    print(f"OpenFoodFacts lookup skipped: {e}")
         
         # Build prompt dynamically based on lookup result
         if resolved_name:

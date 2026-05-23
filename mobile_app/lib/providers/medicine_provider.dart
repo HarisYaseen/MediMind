@@ -129,21 +129,56 @@ class MedicineProvider with ChangeNotifier {
           ? serverKey
           : 'AIzaSyDEy8q-b8UE44EMz78_bJYLNYVzRoC3j8U';
       
-      // 1. Quick local lookup on OpenFoodFacts EAN Database (takes ~0.3s from phone!)
+      // 1. Quick lookup on medical databases (OpenFDA primary, RxNorm secondary, OpenFoodFacts final fallback)
       String? resolvedName;
       if (isBarcode) {
+        // Try Open FDA NDC database
         try {
-          final String url = 'https://world.openfoodfacts.org/api/v0/product/$cleanQuery.json';
-          final response = await http.get(Uri.parse(url), headers: {
-            'User-Agent': 'MediMind - MobileApp - Version 1.0'
-          }).timeout(const Duration(seconds: 3));
-          
+          final String url = 'https://api.fda.gov/drug/ndc.json?search=package_ndc:"$cleanQuery"&limit=1';
+          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 3));
           if (response.statusCode == 200) {
-            final Map<String, dynamic> prodData = json.decode(response.body);
-            resolvedName = prodData['product']?['product_name'];
+            final Map<String, dynamic> fdaData = json.decode(response.body);
+            final List? results = fdaData['results'];
+            if (results != null && results.isNotEmpty) {
+              resolvedName = results[0]['brand_name'] ?? results[0]['generic_name'];
+            }
           }
         } catch (e) {
-          print('Local EAN lookup skipped: $e');
+          print('FDA NDC lookup skipped: $e');
+        }
+
+        // Try RxNorm if FDA missed
+        if (resolvedName == null) {
+          try {
+            final String url = 'https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id=$cleanQuery';
+            final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'}).timeout(const Duration(seconds: 3));
+            if (response.statusCode == 200) {
+              final Map<String, dynamic> rxData = json.decode(response.body);
+              final String? conceptName = rxData['idGroup']?['rxconceptProperties']?[0]?['name'];
+              if (conceptName != null && conceptName.isNotEmpty) {
+                resolvedName = conceptName;
+              }
+            }
+          } catch (e) {
+            print('RxNorm lookup skipped: $e');
+          }
+        }
+
+        // final fallback to OpenFoodFacts EAN Database
+        if (resolvedName == null) {
+          try {
+            final String url = 'https://world.openfoodfacts.org/api/v0/product/$cleanQuery.json';
+            final response = await http.get(Uri.parse(url), headers: {
+              'User-Agent': 'MediMind - MobileApp - Version 1.0'
+            }).timeout(const Duration(seconds: 3));
+            
+            if (response.statusCode == 200) {
+              final Map<String, dynamic> prodData = json.decode(response.body);
+              resolvedName = prodData['product']?['product_name'];
+            }
+          } catch (e) {
+            print('Local EAN lookup skipped: $e');
+          }
         }
       }
 
@@ -177,7 +212,10 @@ Return ONLY raw, valid JSON. Do not write any markdown code block fences (do not
         final fallbackResponse = await http.post(
           Uri.parse('$_baseUrl/lookup_medicine'),
           headers: {'Content-Type': 'application/json'},
-          body: json.encode({'query': cleanQuery}),
+          body: json.encode({
+            'query': cleanQuery,
+            'resolved_name': resolvedName ?? ''
+          }),
         ).timeout(const Duration(seconds: 15));
 
         if (fallbackResponse.statusCode == 200) {
@@ -205,8 +243,7 @@ Return ONLY raw, valid JSON. Do not write any markdown code block fences (do not
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> rawRes = json.decode(response.body);
-        final String text = rawRes['candidates']?[0]?['content']?[0]?['text'] ?? 
-                            rawRes['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
+        final String text = rawRes['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
         if (text.isNotEmpty) {
           return json.decode(text.trim()) as Map<String, dynamic>;
         }
